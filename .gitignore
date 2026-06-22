@@ -1,0 +1,9 @@
+# IP pessoal do Radmin (cache local de cada máquina)
+YourIp.txt
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
