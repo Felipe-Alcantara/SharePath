@@ -1,6 +1,10 @@
 # IP pessoal do Radmin (cache local de cada máquina)
 YourIp.txt
 
+# Pasta do padrão de qualidade baixada via comando "felixo" (não versionar).
+# Glob cobre variações de codificação do nome da pasta em diferentes terminais.
+*de qualidade - Felixo System Design/
+
 # Python
 __pycache__/
 *.pyc
