@@ -10,6 +10,7 @@ Com um único comando, este script:
 
 Uso:
     python start_app.py                # tudo: deps + radmin + tutorial + inicia + navegador
+    python start_app.py --dir PASTA    # compartilha a PASTA indicada (padrão: pasta atual)
     python start_app.py --port 8123    # fixa a porta (padrão 8000; troca sozinha se ocupada)
     python start_app.py --no-install   # pula a instalação de dependências
     python start_app.py --no-browser   # inicia sem abrir o navegador (servidor/automação)
@@ -111,9 +112,10 @@ def check_radmin():
         _print("!", "Siga o tutorial acima para instalar o Radmin antes de compartilhar.")
 
 
-def print_tutorial(port):
+def print_tutorial(port, directory=None):
     """Imprime um passo a passo de uso no terminal, adaptado ao SO atual."""
     os_name = radmin.current_os()
+    pasta = directory if directory else "a pasta atual"
     linha = "=" * 64
     print(f"\n{linha}")
     print("  COMO USAR O SHAREPATH (passo a passo)")
@@ -121,12 +123,13 @@ def print_tutorial(port):
     print(
         "  1. Garanta que o Radmin VPN está aberto e conectado à mesma rede\n"
         "     nos 2 PCs (faixa de IP 26.x.x.x).\n"
-        "  2. Coloque nesta pasta os arquivos que você quer compartilhar.\n"
+        "  2. Coloque em %s os arquivos que você quer compartilhar\n"
+        "     (ou use --dir PASTA para escolher outra pasta).\n"
         "  3. Quando pedido, informe seu IP do Radmin (ele será copiado para\n"
         "     a área de transferência automaticamente).\n"
         "  4. Mande o endereço http://SEU_IP:%d para o seu amigo. No navegador\n"
         "     dele, a pasta aparece para baixar os arquivos.\n"
-        "  5. Pressione Ctrl + C aqui para encerrar o servidor." % port
+        "  5. Pressione Ctrl + C aqui para encerrar o servidor." % (pasta, port)
     )
     if os_name in ("linux", "macos"):
         print(
@@ -146,8 +149,11 @@ def open_browser_when_ready(port):
         time.sleep(0.5)
 
 
-def start_app(open_browser, port):
-    """Inicia o SharePath na ``port`` e bloqueia até o usuário encerrar."""
+def start_app(open_browser, port, directory=None):
+    """Inicia o SharePath na ``port`` e bloqueia até o usuário encerrar.
+
+    Repassa ``directory`` (pasta a compartilhar) ao pacote, se informado.
+    """
     if not (SRC / "sharepath" / "main.py").exists():
         _print("X", f"Pacote sharepath não encontrado em {SRC}")
         sys.exit(1)
@@ -160,26 +166,35 @@ def start_app(open_browser, port):
     # pasta atual de quem chamou, para o servidor expor os arquivos certos.
     env = dict(os.environ)
     env["PYTHONPATH"] = str(SRC) + os.pathsep + env.get("PYTHONPATH", "")
+    cmd = [sys.executable, "-m", "sharepath", "--port", str(port)]
+    if directory is not None:
+        cmd += ["--dir", directory]
     try:
-        subprocess.run([sys.executable, "-m", "sharepath", "--port", str(port)], env=env)
+        subprocess.run(cmd, env=env)
     except KeyboardInterrupt:
         _print("OK", "Encerrado.")
 
 
+def _extract_value(args, *names):
+    """Lê ``--flag VALOR`` (ou ``--flag=VALOR``) de ``args``, se houver."""
+    for i, a in enumerate(args):
+        for name in names:
+            if a == name and i + 1 < len(args):
+                return args[i + 1]
+            if a.startswith(name + "="):
+                return a.split("=", 1)[1]
+    return None
+
+
 def _extract_port(args):
     """Lê ``--port N`` (ou ``--port=N``) de ``args``, se houver."""
-    for i, a in enumerate(args):
-        if a == "--port" and i + 1 < len(args):
-            try:
-                return int(args[i + 1])
-            except ValueError:
-                return None
-        if a.startswith("--port="):
-            try:
-                return int(a.split("=", 1)[1])
-            except ValueError:
-                return None
-    return None
+    raw = _extract_value(args, "--port")
+    if raw is None:
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        return None
 
 
 def main():
@@ -189,6 +204,7 @@ def main():
     check_vpn = "--no-radmin" not in args
     restart = "restart" in args
     cli_port = _extract_port(args)
+    cli_dir = _extract_value(args, "--dir", "--folder")
 
     if restart:
         # Libera a porta-base (e a fixada, se houver) antes de reiniciar.
@@ -203,8 +219,8 @@ def main():
     if check_vpn:
         check_radmin()
 
-    print_tutorial(port)
-    start_app(open_browser, port)
+    print_tutorial(port, cli_dir)
+    start_app(open_browser, port, cli_dir)
 
 
 if __name__ == "__main__":

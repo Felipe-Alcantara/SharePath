@@ -1,4 +1,6 @@
-"""Testes de utils: validação de IP e cache de IP."""
+"""Testes de utils: validação de IP, cache de IP, porta e pasta."""
+
+import pytest
 
 from sharepath import utils
 
@@ -102,6 +104,45 @@ class TestPortResolution:
         monkeypatch.setattr(utils, "find_free_port", lambda p: p)
         monkeypatch.setenv(utils.PORT_ENV_VAR, "abc")
         assert utils.resolve_port() == utils.PORT
+
+
+class TestResolveDirectory:
+    def test_argumento_explicito(self, tmp_path, monkeypatch):
+        monkeypatch.delenv(utils.DIR_ENV_VAR, raising=False)
+        alvo = tmp_path / "compartilhar"
+        alvo.mkdir()
+        assert utils.resolve_directory(str(alvo)) == alvo.resolve()
+
+    def test_usa_env_quando_sem_argumento(self, tmp_path, monkeypatch):
+        alvo = tmp_path / "viaenv"
+        alvo.mkdir()
+        monkeypatch.setenv(utils.DIR_ENV_VAR, str(alvo))
+        assert utils.resolve_directory() == alvo.resolve()
+
+    def test_padrao_e_pasta_atual(self, tmp_path, monkeypatch):
+        monkeypatch.delenv(utils.DIR_ENV_VAR, raising=False)
+        monkeypatch.chdir(tmp_path)
+        assert utils.resolve_directory() == tmp_path.resolve()
+
+    def test_argumento_tem_prioridade_sobre_env(self, tmp_path, monkeypatch):
+        arg = tmp_path / "arg"
+        arg.mkdir()
+        env = tmp_path / "env"
+        env.mkdir()
+        monkeypatch.setenv(utils.DIR_ENV_VAR, str(env))
+        assert utils.resolve_directory(str(arg)) == arg.resolve()
+
+    def test_pasta_inexistente_encerra(self, tmp_path, monkeypatch):
+        monkeypatch.delenv(utils.DIR_ENV_VAR, raising=False)
+        with pytest.raises(SystemExit):
+            utils.resolve_directory(str(tmp_path / "nao-existe"))
+
+    def test_caminho_de_arquivo_encerra(self, tmp_path, monkeypatch):
+        monkeypatch.delenv(utils.DIR_ENV_VAR, raising=False)
+        arquivo = tmp_path / "f.txt"
+        arquivo.write_text("x", encoding="utf-8")
+        with pytest.raises(SystemExit):
+            utils.resolve_directory(str(arquivo))
 
 
 def pytest_fail():

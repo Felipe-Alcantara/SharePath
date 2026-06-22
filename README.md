@@ -88,28 +88,35 @@ imprime um **passo a passo de uso no terminal**, em qualquer SO.
 Outras opções:
 
 ```bash
-python start_app.py --port 8123   # fixa a porta (padrão 8000; troca sozinha se ocupada)
-python start_app.py --no-install  # pula a instalação de dependências
-python start_app.py --no-browser  # inicia sem abrir o navegador
-python start_app.py --no-radmin   # pula a verificação do Radmin VPN
-python start_app.py restart       # libera a porta e reinicia limpo
+python start_app.py --dir "C:/Fotos"  # compartilha outra pasta (padrão: a pasta atual)
+python start_app.py --port 8123       # fixa a porta (padrão 8000; troca sozinha se ocupada)
+python start_app.py --no-install      # pula a instalação de dependências
+python start_app.py --no-browser      # inicia sem abrir o navegador
+python start_app.py --no-radmin       # pula a verificação do Radmin VPN
+python start_app.py restart           # libera a porta e reinicia limpo
 ```
 
 ### Opção 2 — Manual
 
 ```bash
 pip install -r requirements.txt
-python -m sharepath               # ou: python src/sharepath/main.py
-python -m sharepath --port 8123   # porta fixa
+python -m sharepath                   # ou: python src/sharepath/main.py
+python -m sharepath --dir "C:/Fotos"  # compartilha a pasta indicada
+python -m sharepath --port 8123       # porta fixa
 ```
 
 ### Em seguida
 
-1. Coloque os arquivos que quer compartilhar dentro da pasta do projeto.
+1. Escolha o que compartilhar: coloque os arquivos na pasta atual, ou aponte
+   outra pasta com `--dir PASTA` (ou a variável `SHAREPATH_DIR`).
 2. Na primeira vez, o SharePath abre o Radmin e pede o seu IP (salvo em `YourIp.txt`).
 3. O IP **e a porta escolhida** já vêm copiados — mande pro seu amigo, que abre
    `http://SEU_IP:PORTA` no navegador.
 4. `Ctrl + C` encerra o servidor.
+
+> 📁 **Pasta a compartilhar:** por padrão é a pasta atual. Use `--dir PASTA` ou
+> a variável `SHAREPATH_DIR` para servir qualquer outra pasta, sem precisar mover
+> arquivos.
 
 > 🔌 **Porta automática:** o padrão é `8000`, mas se essa porta estiver ocupada
 > (por outro app), o SharePath escolhe sozinho a próxima porta livre e avisa qual.
@@ -148,7 +155,8 @@ detecção/instalação do Radmin VPN.
 - O `YourIp.txt` fica na raiz do projeto, então ele roda de qualquer pasta/máquina.
 - A porta padrão é `8000`, mas é **resolvida automaticamente**: se estiver ocupada,
   o SharePath usa a próxima porta livre. Fixe com `--port` ou `SHAREPATH_PORT`.
-- O servidor expõe os arquivos da pasta atual na rede Radmin — coloque só o que quer compartilhar.
+- Por padrão o servidor expõe a **pasta atual**; use `--dir` / `SHAREPATH_DIR` para
+  escolher outra. Lembre que **tudo na pasta servida fica acessível** na rede Radmin.
 - O Radmin VPN é oficialmente só para Windows; em Linux/macOS roda via Wine.
 
 ---

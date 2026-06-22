@@ -25,6 +25,8 @@ HTTP nessa rede para o outro PC baixar os arquivos da pasta.
   `assets/`, `tests/`.
 - ✅ [2026-06-22] Porta resolvida automaticamente (troca sozinha se ocupada),
   com `--port` e `SHAREPATH_PORT`.
+- ✅ [2026-06-22] Pasta a compartilhar configurável via `--dir`/`--folder` e
+  `SHAREPATH_DIR` (padrão: pasta atual), usando `http.server --directory`.
 
 ---
 
@@ -34,7 +36,7 @@ HTTP nessa rede para o outro PC baixar os arquivos da pasta.
 - Dependências de runtime: `pyperclip` (clipboard), `colorama` (cores no terminal).
 - Dependências de dev: `pytest` (em `requirements-dev.txt`).
 - `start_app.py` e `radmin.py` usam só a biblioteca padrão.
-- Servidor HTTP via `python -m http.server`.
+- Servidor HTTP via `python -m http.server` (com `--directory` para a pasta escolhida).
 
 ---
 
@@ -64,8 +66,9 @@ HTTP nessa rede para o outro PC baixar os arquivos da pasta.
 
 ✅ passou | ❌ falhou
 
-- ✅ Suíte pytest (26 testes): validação de IP, cache de IP, resolução/escolha
-  automática de porta e detecção/instalação do Radmin. Rode com `python -m pytest`.
+- ✅ Suíte pytest (32 testes): validação de IP, cache de IP, resolução/escolha
+  automática de porta, resolução da pasta a compartilhar e detecção/instalação
+  do Radmin. Rode com `python -m pytest`.
 - Verificação manual: `python start_app.py` instala deps, checa o Radmin, imprime
   o tutorial, sobe o servidor e abre o navegador. Confirmado que a porta troca
   sozinha quando a 8000 está ocupada.

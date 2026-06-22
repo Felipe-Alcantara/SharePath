@@ -31,6 +31,9 @@ PORT = 8000
 # Variável de ambiente para fixar a porta sem passar argumento.
 PORT_ENV_VAR = "SHAREPATH_PORT"
 
+# Variável de ambiente para indicar a pasta a compartilhar.
+DIR_ENV_VAR = "SHAREPATH_DIR"
+
 # Cache local do IP fica na pasta de execução (a pasta compartilhada), não num
 # caminho fixo do disco. Assim o projeto roda de qualquer pasta/máquina e o
 # cache acompanha quem está rodando o servidor.
@@ -122,13 +125,41 @@ def resolve_port(cli_port=None):
     return free
 
 
-def open_server(port=PORT):
-    """Sobe ``python -m http.server`` na pasta atual, na ``port`` indicada.
+def resolve_directory(cli_dir=None):
+    """Resolve a pasta a compartilhar e valida que ela existe.
 
-    Usa ``sys.executable`` para garantir o mesmo Python que está rodando este
-    script, em vez de confiar num ``python`` qualquer do PATH.
+    Prioridade: argumento explícito > variável ``SHAREPATH_DIR`` > pasta atual
+    (``Path.cwd()``). Retorna um caminho absoluto. Sai com erro claro se o
+    caminho não existir ou não for uma pasta.
     """
-    subprocess.run([sys.executable, "-m", "http.server", str(port)])
+    raw = cli_dir or os.environ.get(DIR_ENV_VAR) or "."
+    path = Path(raw).expanduser()
+    try:
+        path = path.resolve(strict=True)
+    except (OSError, RuntimeError):
+        custom_print(
+            f"Pasta não encontrada: {raw}", Fore.BLACK, Back.RED
+        )
+        sys.exit(1)
+    if not path.is_dir():
+        custom_print(
+            f"O caminho não é uma pasta: {path}", Fore.BLACK, Back.RED
+        )
+        sys.exit(1)
+    return path
+
+
+def open_server(port=PORT, directory=None):
+    """Sobe ``python -m http.server`` na ``port`` indicada, servindo ``directory``.
+
+    Se ``directory`` for ``None``, serve a pasta atual. Usa ``--directory`` do
+    ``http.server`` para apontar a pasta sem precisar mudar o ``cwd``. Usa
+    ``sys.executable`` para garantir o mesmo Python que roda este script.
+    """
+    cmd = [sys.executable, "-m", "http.server", str(port)]
+    if directory is not None:
+        cmd += ["--directory", str(directory)]
+    subprocess.run(cmd)
 
 
 def open_radmin():
