@@ -1,45 +1,110 @@
-from colorama import Fore, Back
-import os
+"""Funções de apoio do SharePath.
 
-ipTxt = 'C:/SharePath/YourIp.txt'
-port = 8000
+Responsabilidades isoladas aqui:
+- abrir o Radmin VPN;
+- ler / perguntar / salvar o IP do Radmin (cache local em ``YourIp.txt``);
+- subir o servidor de arquivos HTTP;
+- utilitários de impressão colorida no terminal.
+
+Nenhuma regra de negócio do ponto de entrada (``Script.py``) vive aqui.
+"""
+
+import os
+import re
+import sys
+import subprocess
+from pathlib import Path
+
+from colorama import Fore, Back
+
+# Porta padrão do servidor de arquivos.
+PORT = 8000
+
+# Cache local do IP fica ao lado deste módulo, não num caminho fixo do disco.
+# Assim o projeto roda de qualquer pasta, em qualquer máquina.
+IP_CACHE_FILE = Path(__file__).resolve().parent / "YourIp.txt"
+
+# IPv4 simples (ex.: 26.123.45.67). O Radmin usa a faixa 26.x.x.x.
+_IPV4_RE = re.compile(r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$")
+
+# Caminhos comuns de instalação do Radmin VPN no Windows.
+_RADMIN_PATHS = (
+    r"C:/Program Files (x86)/Radmin VPN/RvRvpnGui.exe",
+    r"C:/Program Files/Radmin VPN/RvRvpnGui.exe",
+)
+
 
 def clear():
-    os.system('cls')
+    """Limpa a tela do terminal (Windows: ``cls``; demais: ``clear``)."""
+    os.system("cls" if os.name == "nt" else "clear")
 
-def customPrint(txt, fore = Fore.RESET, back = Back.RESET):
+
+def custom_print(txt, fore=Fore.RESET, back=Back.RESET):
+    """Imprime ``txt`` com cores e reseta o estilo ao final."""
     print(fore + back + txt + Back.RESET + Fore.RESET)
 
-def openPort(port):
-    os.system(f'python -m http.server {port} > nul')
 
-def openRadmin():
-    try: 
-        os.startfile('C:/Program Files (x86)/Radmin VPN/RvRvpnGui')
-    except:
-        customPrint('Não foi possível encontrar o Radmin em seu dispositivo, abra-o manualmente', Fore.BLACK, Back.RED)
-        print()
+def is_valid_ip(ip):
+    """Valida um IPv4 (cada octeto entre 0 e 255)."""
+    match = _IPV4_RE.match(ip.strip())
+    if not match:
+        return False
+    return all(0 <= int(octeto) <= 255 for octeto in match.groups())
 
-def askIp():
-    openRadmin()
-    ip = str(input('Coloque seu IP (Radmin): '))
-    if ':' in ip: ip = ip.split(':')[0]
-    return ip
 
-def getIp():
-    ip = ''
+def open_server(port=PORT):
+    """Sobe ``python -m http.server`` na pasta atual.
 
+    Usa ``sys.executable`` para garantir o mesmo Python que está rodando este
+    script, em vez de confiar num ``python`` qualquer do PATH.
+    """
+    subprocess.run([sys.executable, "-m", "http.server", str(port)])
+
+
+def open_radmin():
+    """Tenta abrir o Radmin VPN; avisa de forma clara se não encontrar."""
+    for caminho in _RADMIN_PATHS:
+        if os.path.exists(caminho):
+            try:
+                os.startfile(caminho)
+                return
+            except OSError:
+                break
+    custom_print(
+        "Não foi possível abrir o Radmin automaticamente. Abra-o manualmente.",
+        Fore.BLACK,
+        Back.RED,
+    )
+    print()
+
+
+def ask_ip():
+    """Abre o Radmin e pergunta o IP ao usuário, validando a entrada."""
+    open_radmin()
+    while True:
+        ip = input("Coloque seu IP (Radmin): ").strip()
+        # Aceita "IP" ou "IP:porta" — descarta a porta, se vier.
+        if ":" in ip:
+            ip = ip.split(":")[0]
+        if is_valid_ip(ip):
+            return ip
+        custom_print("IP inválido. Use o formato 26.x.x.x", Fore.BLACK, Back.RED)
+
+
+def get_ip():
+    """Retorna ``IP:PORTA`` do Radmin, usando o cache local quando válido.
+
+    Se o cache não existir ou estiver inválido, pergunta ao usuário e o
+    persiste. O valor salvo é sempre um IP validado.
+    """
+    ip = ""
     try:
-        with open(ipTxt, 'r', encoding = 'utf-8') as f:
-            ip = f.read()
-    except:
+        ip = IP_CACHE_FILE.read_text(encoding="utf-8").strip()
+    except OSError:
         pass
 
-    if not ip or ip == '':
-        ip = askIp()
+    if not is_valid_ip(ip):
+        ip = ask_ip()
+        IP_CACHE_FILE.write_text(ip, encoding="utf-8")
 
-    with open(ipTxt, 'w', encoding = 'utf-8') as f:
-        f.write(ip)
-
-    with open(ipTxt, 'r', encoding = 'utf-8') as f:
-        return f.read() + ':' + str(port)
+    return f"{ip}:{PORT}"
