@@ -23,6 +23,8 @@ HTTP nessa rede para o outro PC baixar os arquivos da pasta.
   imprime tutorial no terminal.
 - ✅ [2026-06-22] Testes automatizados (pytest) e reorganização em `src/sharepath/`,
   `assets/`, `tests/`.
+- ✅ [2026-06-22] Porta resolvida automaticamente (troca sozinha se ocupada),
+  com `--port` e `SHAREPATH_PORT`.
 
 ---
 
@@ -62,10 +64,11 @@ HTTP nessa rede para o outro PC baixar os arquivos da pasta.
 
 ✅ passou | ❌ falhou
 
-- ✅ Suíte pytest (18 testes): validação de IP, cache de IP, detecção/instalação
-  do Radmin e tutoriais por SO. Rode com `python -m pytest`.
+- ✅ Suíte pytest (26 testes): validação de IP, cache de IP, resolução/escolha
+  automática de porta e detecção/instalação do Radmin. Rode com `python -m pytest`.
 - Verificação manual: `python start_app.py` instala deps, checa o Radmin, imprime
-  o tutorial, sobe o servidor e abre o navegador.
+  o tutorial, sobe o servidor e abre o navegador. Confirmado que a porta troca
+  sozinha quando a 8000 está ocupada.
 
 ---
 
@@ -78,6 +81,17 @@ HTTP nessa rede para o outro PC baixar os arquivos da pasta.
 - **BUG:** IP inválido era salvo sem validação.
   **CAUSA:** `getIp` não validava a entrada.
   **FIX:** `ask_ip`/`get_ip` agora validam com `is_valid_ip` antes de persistir.
+- **BUG (reportado):** terminal poluído por `404` em `GET /ws/bridge?token=...` a
+  cada 5s ao subir o servidor na porta 8000.
+  **CAUSA:** não é bug do SharePath — um cliente local baseado em Chromium
+  (extensão/WebView2) tenta abrir um WebSocket de "bridge" em `localhost:8000`
+  num loop de reconexão; o `http.server` não tem essa rota e responde 404
+  corretamente. Diagnóstico: as conexões fecham em ms, com porta efêmera nova a
+  cada vez, sem PID amarrável por polling.
+  **FIX:** porta resolvida automaticamente — `resolve_port`/`find_free_port` em
+  `utils.py` tiram o SharePath da porta disputada (8000 → próxima livre),
+  esvaziando o terminal sem precisar caçar o app externo. `is_port_free` não usa
+  `SO_REUSEADDR` (no Windows daria falso positivo de porta livre).
 
 ---
 

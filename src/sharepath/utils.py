@@ -12,6 +12,7 @@ Nenhuma regra de negócio do ponto de entrada (``Script.py``) vive aqui.
 import os
 import re
 import sys
+import socket
 import subprocess
 from pathlib import Path
 
@@ -26,6 +27,9 @@ except ImportError:
 
 # Porta padrão do servidor de arquivos.
 PORT = 8000
+
+# Variável de ambiente para fixar a porta sem passar argumento.
+PORT_ENV_VAR = "SHAREPATH_PORT"
 
 # Cache local do IP fica na pasta de execução (a pasta compartilhada), não num
 # caminho fixo do disco. Assim o projeto roda de qualquer pasta/máquina e o
@@ -54,8 +58,72 @@ def is_valid_ip(ip):
     return all(0 <= int(octeto) <= 255 for octeto in match.groups())
 
 
+def is_port_free(port, host="0.0.0.0"):
+    """True se ``port`` está livre para escutar em ``host``.
+
+    Não usa ``SO_REUSEADDR`` de propósito: no Windows ele permitiria fazer
+    bind numa porta já em uso, dando falso positivo. Sem ele, o bind falha
+    quando a porta está realmente ocupada.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.bind((host, port))
+            return True
+        except OSError:
+            return False
+
+
+def find_free_port(preferred=PORT, attempts=50):
+    """Acha uma porta livre, começando pela ``preferred``.
+
+    Tenta a preferida primeiro; se estiver ocupada, sobe a partir dela. Em
+    último caso, pede uma porta efêmera ao SO. Assim o SharePath sai sozinho
+    de uma porta disputada, sem o usuário configurar nada.
+    """
+    if is_port_free(preferred):
+        return preferred
+    for port in range(preferred + 1, preferred + 1 + attempts):
+        if is_port_free(port):
+            return port
+    # Fallback: deixa o SO escolher qualquer porta livre.
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("0.0.0.0", 0))
+        return sock.getsockname()[1]
+
+
+def resolve_port(cli_port=None):
+    """Resolve a porta a usar e garante que esteja livre.
+
+    Prioridade: argumento explícito > variável ``SHAREPATH_PORT`` > padrão
+    ``PORT``. Em seguida, se a porta escolhida estiver ocupada, troca
+    automaticamente por uma livre.
+    """
+    chosen = PORT
+    env_port = os.environ.get(PORT_ENV_VAR)
+    if cli_port is not None:
+        chosen = cli_port
+    elif env_port:
+        try:
+            chosen = int(env_port)
+        except ValueError:
+            custom_print(
+                f"{PORT_ENV_VAR}={env_port!r} não é um número; usando {PORT}.",
+                Fore.BLACK,
+                Back.YELLOW,
+            )
+
+    free = find_free_port(chosen)
+    if free != chosen:
+        custom_print(
+            f"Porta {chosen} ocupada — usando a porta livre {free}.",
+            Fore.BLACK,
+            Back.YELLOW,
+        )
+    return free
+
+
 def open_server(port=PORT):
-    """Sobe ``python -m http.server`` na pasta atual.
+    """Sobe ``python -m http.server`` na pasta atual, na ``port`` indicada.
 
     Usa ``sys.executable`` para garantir o mesmo Python que está rodando este
     script, em vez de confiar num ``python`` qualquer do PATH.
@@ -89,10 +157,11 @@ def ask_ip():
 
 
 def get_ip():
-    """Retorna ``IP:PORTA`` do Radmin, usando o cache local quando válido.
+    """Retorna o IP do Radmin (sem porta), usando o cache local quando válido.
 
     Se o cache não existir ou estiver inválido, pergunta ao usuário e o
-    persiste. O valor salvo é sempre um IP validado.
+    persiste. O valor salvo é sempre um IP validado. A porta é resolvida à
+    parte (ver :func:`resolve_port`), pois pode mudar a cada execução.
     """
     ip = ""
     try:
@@ -104,4 +173,4 @@ def get_ip():
         ip = ask_ip()
         IP_CACHE_FILE.write_text(ip, encoding="utf-8")
 
-    return f"{ip}:{PORT}"
+    return ip
