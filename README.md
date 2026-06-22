@@ -49,13 +49,16 @@ nessa rede para o outro PC baixar os arquivos da pasta.
 
 ```text
 SharePath/
-├── start_app.py        # ⭐ lançador único: instala + inicia + abre o navegador
-├── Script.py           # ponto de entrada: pega o IP, copia e sobe o servidor
-├── Utils.py            # funções de apoio (Radmin, IP, servidor, cores)
-├── requirements.txt    # dependências Python
-├── ShareIcon.ico       # ícone do projeto
-├── IA.md               # contexto operacional do projeto
-└── YourIp.txt          # cache local do seu IP (ignorado pelo git)
+├── start_app.py          # ⭐ lançador único: deps + Radmin + tutorial + inicia + navegador
+├── Script.py             # ponto de entrada: pega o IP, copia e sobe o servidor
+├── Utils.py              # funções de apoio (IP, servidor, cores)
+├── radmin.py             # Radmin VPN: detecta, baixa/instala e orienta (cross-OS)
+├── requirements.txt      # dependências Python
+├── requirements-dev.txt  # dependências de teste (pytest)
+├── tests/                # testes automatizados (pytest)
+├── ShareIcon.ico         # ícone do projeto
+├── IA.md                 # contexto operacional do projeto
+└── YourIp.txt            # cache local do seu IP (ignorado pelo git)
 ```
 
 ---
@@ -63,7 +66,9 @@ SharePath/
 ## ✅ Pré-requisitos
 
 - [Python 3](https://www.python.org/) instalado
-- [Radmin VPN](https://www.radmin-vpn.com/) instalado e com a rede já criada/conectada nos 2 PCs
+- [Radmin VPN](https://www.radmin-vpn.com/) com a rede já criada/conectada nos 2 PCs
+  — se faltar, o `start_app.py` oferece **baixar e instalar automaticamente** (Windows)
+  ou mostra um tutorial por SO (Linux/macOS via Wine).
 
 ---
 
@@ -77,11 +82,15 @@ Um comando instala as dependências, inicia o SharePath e abre o navegador local
 python start_app.py
 ```
 
+O lançador também **verifica o Radmin VPN** (oferece instalar se faltar) e
+imprime um **passo a passo de uso no terminal**, em qualquer SO.
+
 Outras opções:
 
 ```bash
 python start_app.py --no-install   # pula a instalação de dependências
 python start_app.py --no-browser   # inicia sem abrir o navegador
+python start_app.py --no-radmin    # pula a verificação do Radmin VPN
 python start_app.py restart        # libera a porta e reinicia limpo
 ```
 
@@ -89,7 +98,7 @@ python start_app.py restart        # libera a porta e reinicia limpo
 
 ```bash
 pip install -r requirements.txt
-python Script.py
+python -m sharepath          # ou: python src/sharepath/main.py
 ```
 
 ### Em seguida
@@ -103,21 +112,35 @@ python Script.py
 
 ## 🔧 Arquivos
 
-| Arquivo            | Função                                                          |
-|--------------------|-----------------------------------------------------------------|
-| **`start_app.py`** | Lançador único: instala deps, inicia o app e abre o navegador   |
-| **`Script.py`**    | Ponto de entrada: pega o IP, copia e sobe o servidor            |
-| **`Utils.py`**     | Funções de apoio (abrir Radmin, ler/salvar IP, cores, servidor) |
-| **`ShareIcon.ico`**| Ícone do projeto                                                |
-| **`YourIp.txt`**   | Cache local do seu IP do Radmin (ignorado pelo git)             |
+| Caminho                    | Função                                                       |
+|----------------------------|--------------------------------------------------------------|
+| **`start_app.py`**         | Lançador único: deps + Radmin + tutorial + inicia + navegador|
+| **`src/sharepath/main.py`**| Ponto de entrada: pega o IP, copia e sobe o servidor         |
+| **`src/sharepath/utils.py`**| Funções de apoio (ler/salvar IP, cores, servidor)           |
+| **`src/sharepath/radmin.py`**| Radmin VPN: detecta, baixa/instala e orienta (cross-OS)    |
+| **`assets/ShareIcon.ico`** | Ícone do projeto                                             |
+| **`tests/`**               | Testes automatizados (pytest)                               |
+| **`YourIp.txt`**           | Cache local do seu IP do Radmin (ignorado pelo git)         |
+
+---
+
+## 🧪 Testes
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+Cobrem a validação de IP, o cache de IP e a detecção/instalação do Radmin VPN.
 
 ---
 
 ## ⚠️ Observações
 
-- O `YourIp.txt` fica ao lado dos scripts, então o projeto roda de qualquer pasta/máquina.
-- A porta padrão é `8000` (constante `PORT` em `Utils.py` e `start_app.py`).
+- O `YourIp.txt` fica na raiz do projeto, então ele roda de qualquer pasta/máquina.
+- A porta padrão é `8000` (constante `PORT` em `src/sharepath/utils.py` e `start_app.py`).
 - O servidor expõe os arquivos da pasta atual na rede Radmin — coloque só o que quer compartilhar.
+- O Radmin VPN é oficialmente só para Windows; em Linux/macOS roda via Wine.
 
 ---
 

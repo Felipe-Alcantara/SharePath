@@ -17,21 +17,23 @@ from pathlib import Path
 
 from colorama import Fore, Back
 
+try:
+    # Execução como pacote: python -m sharepath
+    from . import radmin
+except ImportError:
+    # Execução direta do arquivo: python src/sharepath/main.py
+    import radmin
+
 # Porta padrão do servidor de arquivos.
 PORT = 8000
 
-# Cache local do IP fica ao lado deste módulo, não num caminho fixo do disco.
-# Assim o projeto roda de qualquer pasta, em qualquer máquina.
-IP_CACHE_FILE = Path(__file__).resolve().parent / "YourIp.txt"
+# Cache local do IP fica na pasta de execução (a pasta compartilhada), não num
+# caminho fixo do disco. Assim o projeto roda de qualquer pasta/máquina e o
+# cache acompanha quem está rodando o servidor.
+IP_CACHE_FILE = Path.cwd() / "YourIp.txt"
 
 # IPv4 simples (ex.: 26.123.45.67). O Radmin usa a faixa 26.x.x.x.
 _IPV4_RE = re.compile(r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$")
-
-# Caminhos comuns de instalação do Radmin VPN no Windows.
-_RADMIN_PATHS = (
-    r"C:/Program Files (x86)/Radmin VPN/RvRvpnGui.exe",
-    r"C:/Program Files/Radmin VPN/RvRvpnGui.exe",
-)
 
 
 def clear():
@@ -62,14 +64,9 @@ def open_server(port=PORT):
 
 
 def open_radmin():
-    """Tenta abrir o Radmin VPN; avisa de forma clara se não encontrar."""
-    for caminho in _RADMIN_PATHS:
-        if os.path.exists(caminho):
-            try:
-                os.startfile(caminho)
-                return
-            except OSError:
-                break
+    """Abre o Radmin VPN; avisa de forma clara se não conseguir."""
+    if radmin.open_radmin():
+        return
     custom_print(
         "Não foi possível abrir o Radmin automaticamente. Abra-o manualmente.",
         Fore.BLACK,

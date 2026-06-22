@@ -19,24 +19,34 @@ HTTP nessa rede para o outro PC baixar os arquivos da pasta.
 
 - ✅ [2026-06-22] Servidor de arquivos funcional via `http.server`.
 - ✅ [2026-06-22] Adequação ao padrão de qualidade Felixo (refactor + start_app.py + docs).
+- ✅ [2026-06-22] `start_app.py` autossustentável: cross-OS, detecta/instala o Radmin,
+  imprime tutorial no terminal.
+- ✅ [2026-06-22] Testes automatizados (pytest) e reorganização em `src/sharepath/`,
+  `assets/`, `tests/`.
 
 ---
 
 ## 🛠️ STACK & DEPENDÊNCIAS
 
 - **Python 3** (apenas).
-- Dependências externas: `pyperclip` (clipboard), `colorama` (cores no terminal).
-- `start_app.py` usa só a biblioteca padrão.
+- Dependências de runtime: `pyperclip` (clipboard), `colorama` (cores no terminal).
+- Dependências de dev: `pytest` (em `requirements-dev.txt`).
+- `start_app.py` e `radmin.py` usam só a biblioteca padrão.
 - Servidor HTTP via `python -m http.server`.
 
 ---
 
 ## 📐 DECISÕES DE ARQUITETURA
 
-- `Script.py` é o ponto de entrada; `Utils.py` concentra as funções de apoio
-  (abrir Radmin, ler/salvar IP, subir servidor, impressão colorida).
-- Responsabilidades separadas: ponto de entrada não conhece detalhes de I/O do IP.
-- `start_app.py` é o lançador único exigido pelo padrão (instala + inicia + abre navegador).
+- Código fica no pacote `src/sharepath/`: `main.py` (entrada), `utils.py` (IP,
+  servidor, cores) e `radmin.py` (detecção/instalação/tutorial do Radmin, cross-OS).
+- `start_app.py` (lançador único exigido pelo padrão) e docs ficam na **raiz**;
+  ícone em `assets/`; testes em `tests/`.
+- Responsabilidades separadas: entrada não conhece I/O do IP; lidar com o Radmin
+  é responsabilidade exclusiva de `radmin.py`.
+- Execução como pacote (`python -m sharepath`), com fallback de import para rodar
+  o arquivo diretamente.
+- Cache do IP ancorado em `Path.cwd()` (pasta compartilhada), não no caminho do módulo.
 
 ---
 
@@ -52,8 +62,10 @@ HTTP nessa rede para o outro PC baixar os arquivos da pasta.
 
 ✅ passou | ❌ falhou
 
-- ✅ Validação de IP (`is_valid_ip`) rejeita formatos inválidos e octetos > 255.
-- Verificação manual: `python start_app.py` instala deps, sobe o servidor e abre o navegador.
+- ✅ Suíte pytest (18 testes): validação de IP, cache de IP, detecção/instalação
+  do Radmin e tutoriais por SO. Rode com `python -m pytest`.
+- Verificação manual: `python start_app.py` instala deps, checa o Radmin, imprime
+  o tutorial, sobe o servidor e abre o navegador.
 
 ---
 

@@ -7,7 +7,12 @@ de arquivos na pasta atual para o outro PC baixar.
 import pyperclip
 from colorama import Fore, Back
 
-from Utils import PORT, clear, custom_print, get_ip, open_server
+try:
+    # Execução como pacote: python -m sharepath
+    from .utils import PORT, clear, custom_print, get_ip, open_server
+except ImportError:
+    # Execução direta do arquivo: python src/sharepath/main.py
+    from utils import PORT, clear, custom_print, get_ip, open_server
 
 
 def main():
